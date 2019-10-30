@@ -1,0 +1,57 @@
+---
+title: "Fidelity"
+author: "Runxin Yu"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse,magrittr,tibbletime)
+```
+
+## Data Exploration
+
+Fidelity China Region Fund
+```{r}
+FHKCX <- read.csv("FHKCX.csv")
+head(FHKCX)
+```
+
+Now take a look at the indices
+```{r}
+# Nikkei 225
+Nikkei <- read.csv("Nikkei 225.csv")
+head(Nikkei)
+Nikkei$Close <- as.numeric(Nikkei$Close)
+# HANG SENG INDEX
+Hang <- read.csv("HANG SENG INDEX.csv")
+head(Hang)
+Hang$Close <- as.numeric(Hang$Close)
+# S&P BSE SENSEX
+BSE <- read.csv("S&P BSE SENSEX.csv")
+head(BSE)
+BSE$Close <- as.numeric(BSE$Close)
+```
+
+## Data Cleaning
+
+We can merge the fund with its indices.
+```{r}
+FHKCX$Date <- as.Date(FHKCX$Date, "%Y-%m-%d")
+ggplot(FHKCX) + geom_line(aes(FHKCX$Date,FHKCX$Close),stat = "identity",size = 0.5)+
+  xlab("Date") + ylab("Close")
+
+Nikkei$Date <- as.Date(Nikkei$Date, "%Y-%m-%d") 
+ggplot(Nikkei) + geom_line(aes(Nikkei$Date,Nikkei$Close),stat = "identity",size = 0.5)+
+  xlab("Date") + ylab("Close")
+
+Hang$Date <- as.Date(Hang$Date, "%Y-%m-%d")
+ggplot(Hang) + geom_line(aes(Hang$Date,Hang$Close),stat = "identity",size = 0.5)+
+  xlab("Date") + ylab("Close")
+
+BSE$Date <- as.Date(BSE$Date, "%Y-%m-%d")
+ggplot(BSE) + geom_line(aes(BSE$Date,BSE$Close),stat = "identity",size = 0.5)+
+  xlab("Date") + ylab("Close")
+```
+
+

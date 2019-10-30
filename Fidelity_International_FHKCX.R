@@ -1,6 +1,6 @@
-library(tidyverse)
-library(magrittr)
-library(tibbletime)
+
+pacman::p_load(tidyverse,magrittr,tibbletime)
+
 FHKCX <- read.csv("FHKCX.csv")
 View(FHKCX)
 # FHKCX_close <- FHKCX %>% select(Date,Close)
