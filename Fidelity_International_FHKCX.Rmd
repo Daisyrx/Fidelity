@@ -6,15 +6,17 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse,magrittr,tibbletime)
+pacman::p_load(tidyverse,magrittr,tibbletime,plotly)
 ```
 
 ## Data Exploration
 
-Fidelity China Region Fund
+Fidelity China Region Fund and its Benchmark -- MSCI
 ```{r}
 FHKCX <- read.csv("FHKCX.csv")
 head(FHKCX)
+MSCI <- read.csv("MSCI.csv")
+head(MSCI)
 ```
 
 Now take a look at the indices
@@ -22,25 +24,40 @@ Now take a look at the indices
 # Nikkei 225
 Nikkei <- read.csv("Nikkei 225.csv")
 head(Nikkei)
-Nikkei$Close <- as.numeric(Nikkei$Close)
+Nikkei$Close <- as.numeric(as.character(Nikkei$Close))
 # HANG SENG INDEX
 Hang <- read.csv("HANG SENG INDEX.csv")
 head(Hang)
-Hang$Close <- as.numeric(Hang$Close)
+Hang$Close <- as.numeric(as.character(Hang$Close))
 # S&P BSE SENSEX
 BSE <- read.csv("S&P BSE SENSEX.csv")
 head(BSE)
-BSE$Close <- as.numeric(BSE$Close)
+BSE$Close <- as.numeric(as.character(BSE$Close))
+# Vanguard FTSE Emerging Markets Index Fund ETF Shares(VWO)
+VWO <- read.csv("VWO.csv")
+head(VWO)
+VWO$Close <- as.numeric(VWO$Close)
+# NASDAQ Composite (^IXIC)
+IXIC <- read.csv("IXIC.csv")
+head(IXIC)
+IXIC$Close <- as.numeric(IXIC$Close)
 ```
 
 ## Data Cleaning
 
-We can merge the fund with its indices.
+Fiest take a look at the plots of the fund as well as its indices.
 ```{r}
+# Plot of the Fund
 FHKCX$Date <- as.Date(FHKCX$Date, "%Y-%m-%d")
 ggplot(FHKCX) + geom_line(aes(FHKCX$Date,FHKCX$Close),stat = "identity",size = 0.5)+
   xlab("Date") + ylab("Close")
 
+# Plot of the benchmark
+MSCI$Date <- as.Date(MSCI$Date,"%b %d, %Y")
+ggplot(MSCI) + geom_line(aes(MSCI$Date,MSCI$Price),stat = "identity",size = 0.5)+
+  xlab("Date") + ylab("Close")
+
+# Plots of incdices
 Nikkei$Date <- as.Date(Nikkei$Date, "%Y-%m-%d") 
 ggplot(Nikkei) + geom_line(aes(Nikkei$Date,Nikkei$Close),stat = "identity",size = 0.5)+
   xlab("Date") + ylab("Close")
@@ -52,6 +69,140 @@ ggplot(Hang) + geom_line(aes(Hang$Date,Hang$Close),stat = "identity",size = 0.5)
 BSE$Date <- as.Date(BSE$Date, "%Y-%m-%d")
 ggplot(BSE) + geom_line(aes(BSE$Date,BSE$Close),stat = "identity",size = 0.5)+
   xlab("Date") + ylab("Close")
+
+VWO$Date <- as.Date(VWO$Date, "%Y-%m-%d")
+ggplot(VWO) + geom_line(aes(VWO$Date,VWO$Close),stat = "identity",size = 0.5)+
+  xlab("Date") + ylab("Close")
+
+IXIC$Date <- as.Date(IXIC$Date, "%Y-%m-%d")
+ggplot(IXIC) + geom_line(aes(IXIC$Date,IXIC$Close),stat = "identity",size = 0.5)+
+  xlab("Date") + ylab("Close")
+
+FHKCX %<>% select(Date, Close) %>% rename(FHKCX = Close)
+Nikkei %<>% select(Date, Close) %>% rename(Nikkei = Close)%>%filter(Nikkei != "null")
+Hang %<>% select(Date, Close) %>% rename(Hang = Close)
+BSE %<>% select(Date, Close) %>% rename(BSE = Close)
+VWO %<>% select(Date, Close) %>% rename(VWO = Close)
+IXIC %<>% select(Date, Close) %>% rename(IXIC = Close)
+MSCI %<>% select(Date,Price) %>% rename(MSCI = Price)
+
+# mearge the fund and the indices by date
+data <- merge(FHKCX, Nikkei, by = "Date")
+data <- merge(data, Hang, by = "Date")
+data <- merge(data, BSE, by = "Date")
+data <- merge(data, VWO, by = "Date")
+data <- merge(data, IXIC, by = "Date")
+data <- merge(data,MSCI,by = "Date")
 ```
+
+## Log Return
+
+Take a look at the log return of the fund as well as the indicies.
+
+```{r}
+# calculate the lig return of each index
+FHKCX_return <- diff(log(data$FHKCX), differences=1)
+Nikkei_return <- diff(log(data$Nikkei), differences=1)
+Hang_return <- diff(log(data$Hang), differences=1)
+BSE_return <- diff(log(data$BSE), differences=1)
+VWO_return <- diff(log(data$VWO), differences=1)
+IXIC_return <- diff(log(data$IXIC), differences=1)
+MSCI_return <- diff(log(data$MSCI), differences=1)
+log_return <- data.frame(cbind(FHKCX_return,MSCI_return,Nikkei_return,Hang_return,BSE_return,VWO_return,IXIC_return))
+log_return <- cbind(data$Date[2:length(data$Date)],log_return)
+log_return %<>% rename(Date=`data$Date[2:length(data$Date)]`)
+
+# Visualization
+# Take a look at the holding period return
+p1 <- ggplot(data)+
+  geom_line(aes(x=Date, y=10000*(FHKCX/data$FHKCX[1])))+
+  geom_line(aes(x=Date, y=10000*(MSCI/data$MSCI[1]), color="MSCI")) +
+  geom_line(aes(x=Date, y=10000*(Nikkei/data$Nikkei[1]), color="Nikkei"))+
+  geom_line(aes(x=Date, y=10000*(Hang/data$Hang[1]), color="Hang"))+
+  geom_line(aes(x=Date, y=10000*(BSE/data$BSE[1]), color="BSE"))+
+  geom_line(aes(x=Date,y=10000*(VWO/data$VWO[1]),color="VWO"))+
+  geom_line(aes(x=Date,y=10000*(IXIC/data$IXIC[1]),color = "IXIC"))+
+  ylab("holding period return")
+
+ggplotly(p1)
+
+# Take a look at log returns
+p2 <- ggplot(log_return)+
+  geom_line(aes(x=Date, y=log_return$FHKCX_return))+
+  geom_line(aes(x=Date, y=log_return$MSCI_return, color="MSCI_return"))+
+  geom_line(aes(x=Date, y=log_return$Nikkei_return, color="Nikkei_return"))+
+  geom_line(aes(x=Date, y=log_return$Hang_return, color="Hang_return"))+
+  geom_line(aes(x=Date, y=log_return$BSE_return, color="BSE_return"))+
+  geom_line(aes(x=Date, y=log_return$VWO_return,color="VWO_return"))+
+  geom_line(aes(x=Date, y=log_return$IXIC_return,color = "IXIC"))+
+  ylab("log returns")
+
+ggplotly(p2)
+
+
+## correlation
+
+## correlation plot of log returns
+corrplot::corrplot(cor(log_return[,-1],log_return[,-1]),is.corr = FALSE,title = "Correlation Plot of Log Return",type = "upper", tl.col = "black", mar=c(1,1,2,1))
+
+## correlation of original scale
+COR <- cor(data[-c(1,2)])
+corrplot::corrplot(COR, type = "upper", order = "hclust", 
+                   tl.col = "black", tl.srt = 45)
+
+# pairs(~Nikkei+Hang+BSE+VWO+IXIC,data)
+# car::scatterplotMatrix(~Nikkei+Hang+BSE+VWO+IXIC, data)
+# car::scatterplotMatrix(~Nikkei+Hang+BSE+VWO+IXIC, diagonal=F, smooth=F, data)
+
+```
+
+## Fit Simple linear regression model 
+
+```{r}
+# Fit the benchmark into the linear regression model to see the goodness of fit
+fit0 <- lm(FHKCX_return ~ MSCI_return-1,data = log_return)
+summary(fit0)
+
+# Since from the log returns plot above VWO is the closest to the FHCKX fund, fit the VWO first.
+fit1 <- lm(FHKCX_return ~ VWO_return, data = log_return)
+summary(fit1)
+#plot(fit1, which = 1)
+cor.test(log_return$FHKCX_return,log_return$VWO_return)
+# Residual Plot
+ggplot(fit1)+aes(x = .fitted,y = .stdresid)+geom_point()+geom_abline(intercept = 2.0,slope = 0.0, linetype = "dashed")+geom_abline(intercept = -2.0,slope = 0.0, linetype = "dashed")+ylab("Standardized Residuals")+xlab("Fitted Values")+ggtitle("Standardized Residual Plot")
+# QQnorm Plot
+ggplot(fit1)+aes(sample = .stdresid)+stat_qq() + stat_qq_line(linetype = "dashed")+ylab("Standardized Residuals")+ggtitle("QQnorm Plot")
+
+# IXIC is another index that is very close to the fund, so add it to the model.
+fit2 <- lm(FHKCX_return ~ VWO_return + IXIC_return, data = log_return)
+summary(fit2)
+#plot(fit2, which = 1)
+# Residual Plot
+ggplot(fit2)+aes(x = .fitted,y = .stdresid)+geom_point()+geom_abline(intercept = 2.0,slope = 0.0, linetype = "dashed")+geom_abline(intercept = -2.0,slope = 0.0, linetype = "dashed")+ylab("Standardized Residuals")+xlab("Fitted Values")+ggtitle("Standardized Residual Plot")
+# QQnorm Plot
+ggplot(fit2)+aes(sample = .stdresid)+stat_qq() + stat_qq_line(linetype = "dashed")+ylab("Standardized Residuals")+ggtitle("QQnorm Plot")
+
+cor.test(log_return$FHKCX_return,log_return$IXIC_return)
+cor.test(log_return$VWO_return,log_return$IXIC_return)
+# It appears that IXIC and VWO are more correlated with a correlation of 0.7
+
+fit3 <- lm(FHKCX_return ~ VWO_return + IXIC_return + Nikkei_return + Hang_return + BSE_return, data = log_return)
+summary(fit3)
+#plot(fit3, which = 1)
+# Residual Plot
+ggplot(fit3)+aes(x = .fitted,y = .stdresid)+geom_point()+geom_abline(intercept = 2.0,slope = 0.0, linetype = "dashed")+geom_abline(intercept = -2.0,slope = 0.0, linetype = "dashed")+ylab("Standardized Residuals")+xlab("Fitted Values")+ggtitle("Standardized Residual Plot")
+# QQnorm Plot
+ggplot(fit3)+aes(sample = .stdresid)+stat_qq() + stat_qq_line(linetype = "dashed")+ylab("Standardized Residuals")+ggtitle("QQnorm Plot")
+
+fit4 <- lm(FHKCX_return ~ Hang_return - 1)
+summary(fit4)
+
+```
+
+
+
+
+
+
 
 
